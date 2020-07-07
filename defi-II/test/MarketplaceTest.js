@@ -25,10 +25,14 @@ contract('Marketplace', async([owner,user1,user2,user3])=>{
     });
 
     describe('inscription', async () =>{
-        let result;
+        let result, requestCount,oldBalanceOwner,newBalanceOwner,price,oldReputation,newReputation;
  
         before(async ()=>{
             result = await marketplace.inscription('Lilia',1,{from:user1});
+            await marketplace.inscription('Malika',4,{from:user3});
+            oldBalanceOwner= await marketplace.balances(owner);
+            oldBalanceOwner = new web3.utils.BN(oldBalanceOwner);
+           
         });
     
         it('creates user', async () =>{
@@ -50,25 +54,9 @@ contract('Marketplace', async([owner,user1,user2,user3])=>{
         assert.equal(users.isUser, true, "isUser is correct");
         });
 
-    });
-
-    //Lilia mon amour
-    describe('Request', async () =>{
-        let result, requestCount,oldBalanceOwner,newBalanceOwner,price;
- 
-        before(async ()=>{
-        //    await marketplace.inscription('Lilia',1,{from:user1});
-            await marketplace.inscription('Malika',4,{from:user3});
-
-            oldBalanceOwner= await marketplace.balances(owner);
-            oldBalanceOwner = new web3.utils.BN(oldBalanceOwner);
-
+        it('addRequest', async () =>{
             result = await marketplace.addRequest('first request',3,3,30,{from:user1, value: web3.utils.toWei('3.06','Ether')});
             requestCount = await marketplace.requestCount();
-     
-        });
-     
-        it('addRequest', async () =>{
             //success
         const event=result.logs[0].args;
         assert.equal(event._add, user1, "user address is correct");
@@ -136,20 +124,49 @@ contract('Marketplace', async([owner,user1,user2,user3])=>{
         });
 
         it('delivry', async () => {
-            result = await marketplace.delivry(1,"www.google.com",{from:user3});
+            users =await marketplace.users(user3);
+            oldReputation = new web3.utils.BN(users.reputation);
+
+            result = await marketplace.delivery(1,"www.google.com",{from:user3});
+      
+            const increment=new web3.utils.BN(1);
+            const expectedReputation=oldReputation.add(increment);
 
             const event=result.logs[0].args;
 
-            console.log(event);
-
+            users =await marketplace.users(user3);
+            newReputation = new web3.utils.BN(users.reputation);
+            
             assert.equal(event._id, 1, "id is correct");
             assert.equal(event._add, user3, "address is correct");
             assert.equal(event._url, "www.google.com", "url is correct");
             assert.equal(event._reputation,5, "reputation is correct");
-        })
+            assert.equal(newReputation.toNumber(), expectedReputation.toNumber(), "reputation is correct");
 
+        });
 
+        /*
+        it('sanction',async () =>{
 
+            users =await marketplace.users(user3);
+            oldReputation = new web3.utils.BN(users.reputation);
+            result = await marketplace.sanction(1,user3,{from:user1});
+      
+            const increment=new web3.utils.BN(1);
+            const expectedReputation=oldReputation.sub(increment);
+
+            const event=result.logs[0].args;
+
+            users =await marketplace.users(user3);
+            newReputation = new web3.utils.BN(users.reputation);
+
+            console.log(newReputation.toNumber());
+            console.log(expectedReputation.toNumber());
+            assert.equal(newReputation.toNumber(), expectedReputation.toNumber(), "reputation is correct");
+
+        });
+        */
+       
     });
 
 
